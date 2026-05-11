@@ -8,6 +8,8 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#546B41">
 
+    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -22,82 +24,37 @@
             background: radial-gradient(circle at top left, rgba(153,173,122,0.12), transparent 30%), radial-gradient(circle at bottom right, rgba(220,204,172,0.08), transparent 35%), linear-gradient(135deg, #1E241B 0%, #2C3526 50%, #161B14 100%);
         }
 
-            body::before {
-                content: "";
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.18);
-                backdrop-filter: blur(18px);
-                -webkit-backdrop-filter: blur(18px);
-                z-index: -1;
-            }
-
         h2 {
             font-size: 30px;
-            margin-bottom: 18px;
-            color: #FFF8EC;
-            text-shadow: 0 2px 12px rgba(0,0,0,0.35);
             text-align: center;
+            color: #FFF8EC;
         }
 
         h3 {
-            margin-top: 24px;
-            margin-bottom: 10px;
-            color: #DCCCAC;
             text-align: center;
+            color: #DCCCAC;
         }
 
-        input {
+        input, textarea, .info, .result, .log {
             width: 100%;
-            margin-bottom: 12px;
-            padding: 14px;
             color: #FFF8EC;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 18px;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.22);
-        }
-
-        .info {
-            font-size: 14px;
-            color: #DCCCAC;
-            margin-bottom: 15px;
-            padding: 12px 14px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            padding: 14px;
+            margin-bottom: 12px;
         }
 
         textarea {
-            width: 100%;
             height: 220px;
-            margin-bottom: 15px;
             font-size: 16px;
             line-height: 1.7;
-            padding: 16px;
-            color: #FFF8EC;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 22px;
-            outline: none;
             resize: vertical;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 45px rgba(0,0,0,0.28);
-            transition: 0.2s;
+            outline: none;
         }
 
             textarea::placeholder {
                 color: rgba(255,248,236,0.4);
-            }
-
-            textarea:focus {
-                border-color: rgba(153,173,122,0.45);
-                box-shadow: 0 0 0 3px rgba(153,173,122,0.08), 0 18px 45px rgba(0,0,0,0.3);
             }
 
         button {
@@ -107,46 +64,28 @@
             font-weight: 600;
             margin-bottom: 10px;
             color: #FFF8EC;
-            background: linear-gradient( 135deg, rgba(84,107,65,0.95), rgba(153,173,122,0.88) );
-            border: 1px solid rgba(255,255,255,0.08);
+            background: linear-gradient(135deg, #546B41, #99AD7A);
+            border: none;
             border-radius: 18px;
             cursor: pointer;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(0,0,0,0.28);
-            transition: 0.2s ease;
         }
 
             button:hover {
-                transform: translateY(-1px);
-                background: linear-gradient( 135deg, rgba(99,124,77,1), rgba(153,173,122,1) );
+                filter: brightness(1.1);
             }
 
-            button:active {
-                transform: translateY(1px);
-            }
-
-        .result,
-        .log {
-            color: #FFF8EC;
-            background: rgba(255,255,255,0.05);
-            padding: 16px;
-            margin-top: 12px;
+        .result, .log {
             white-space: pre-wrap;
             min-height: 100px;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 22px;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 18px 45px rgba(0,0,0,0.28);
         }
 
         .log {
+            color: #DCCCAC;
             font-size: 14px;
             line-height: 1.8;
-            color: #DCCCAC;
         }
 
         @media (max-width:600px) {
-
             body {
                 padding: 18px;
             }
@@ -169,8 +108,9 @@
     <input type="file" id="csvFile" accept=".csv,.txt,.tsv">
 
     <div class="info" id="dictionaryName">尚未載入字庫</div>
+    <div class="info" id="openccStatus">基礎簡轉繁載入中……</div>
 
-    <textarea id="inputText" placeholder="貼上簡體文字"></textarea>
+<textarea id="inputText" placeholder="貼上簡體文字"></textarea>
 
     <button onclick="convertText()">開始轉換</button>
     <button onclick="copyResult()">複製結果</button>
@@ -185,14 +125,27 @@
 
     <script>
         let dictionary = {};
+        let openccConverter = null;
 
         document.getElementById('csvFile').addEventListener('change', handleFileUpload);
+        window.addEventListener('load', initApp);
 
-        window.addEventListener('load', loadSavedDictionary);
+        function initApp() {
+            initOpenCC();
+            loadSavedDictionary();
+        }
+
+        function initOpenCC() {
+            if (window.OpenCC && OpenCC.Converter) {
+                openccConverter = OpenCC.Converter({ from: 'cn', to: 'tw' });
+                document.getElementById('openccStatus').innerText = '基礎簡轉繁：已啟用 OpenCC';
+            } else {
+                document.getElementById('openccStatus').innerText = '基礎簡轉繁：未載入，將只套用字庫';
+            }
+        }
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
-
             if (!file) return;
 
             const reader = new FileReader();
@@ -245,7 +198,6 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-
                 if (!line) continue;
 
                 if (i === 0 && (
@@ -256,13 +208,7 @@
                     continue;
                 }
 
-                let parts;
-
-                if (line.includes('\t')) {
-                    parts = line.split('\t');
-                } else {
-                    parts = parseCSVLine(line);
-                }
+                let parts = line.includes('\t') ? line.split('\t') : parseCSVLine(line);
 
                 if (parts.length < 2) continue;
 
@@ -294,16 +240,10 @@
             }
 
             result.push(current);
-
             return result;
         }
 
         function convertText() {
-            if (Object.keys(dictionary).length === 0) {
-                alert("請先匯入字庫");
-                return;
-            }
-
             let text = document.getElementById('inputText').value;
 
             if (!text.trim()) {
@@ -311,27 +251,50 @@
                 return;
             }
 
+            const replaceRecords = [];
+            const protectedTerms = [];
+
             const entries = Object.entries(dictionary)
                 .sort((a, b) => b[0].length - a[0].length);
-
-            const replaceRecords = [];
 
             for (const [source, target] of entries) {
                 if (text.includes(source)) {
                     const count = text.split(source).length - 1;
+                    const placeholder = `__CUSTOM_TERM_${protectedTerms.length}__`;
 
-                    text = text.split(source).join(target);
+                    text = text.split(source).join(placeholder);
+
+                    protectedTerms.push({
+                        placeholder,
+                        target
+                    });
 
                     replaceRecords.push(`${source} → ${target}（${count} 次）`);
                 }
             }
 
+            if (openccConverter) {
+                text = openccConverter(text);
+            }
+
+            for (const item of protectedTerms) {
+                text = text.split(item.placeholder).join(item.target);
+            }
+
             document.getElementById('result').innerText = text;
 
+            const baseLog = openccConverter
+                ? '已套用基礎簡轉繁：OpenCC cn → tw'
+                : '未套用基礎簡轉繁：OpenCC 未載入';
+
             document.getElementById('replaceLog').innerText =
-                replaceRecords.length > 0
-                    ? replaceRecords.join('\n')
-                    : '沒有符合字庫的詞條';
+                [
+                    replaceRecords.length > 0
+                        ? replaceRecords.join('\n')
+                        : '沒有符合字庫的詞條',
+                    '',
+                    baseLog
+                ].join('\n');
         }
 
         function copyResult() {
