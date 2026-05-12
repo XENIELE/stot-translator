@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>簡轉繁小工具</title>
+    <title>臨翻轉換工具</title>
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#546B41">
@@ -103,7 +103,7 @@
 
 <body>
 
-    <h2>簡轉繁小工具</h2>
+    <h2>臨翻小工具</h2>
 
     <input type="file" id="csvFile" accept=".csv,.txt,.tsv">
 
@@ -247,7 +247,7 @@
             let text = document.getElementById('inputText').value;
 
             if (!text.trim()) {
-                alert("請先貼上要轉換的文字");
+                alert("請先貼上要轉換的文字(*’ｰ’*)");
                 return;
             }
 
@@ -301,16 +301,16 @@
             const result = document.getElementById('result').innerText;
 
             if (!result.trim()) {
-                alert("目前沒有可複製的結果");
+                alert("目前沒有可複製的結果Σ(ﾟωﾟ)");
                 return;
             }
 
             navigator.clipboard.writeText(result)
                 .then(function () {
-                    alert("已複製結果！");
+                    alert("已複製結果！ヽ(●´∀`●)ﾉ");
                 })
                 .catch(function () {
-                    alert("複製失敗，請手動選取結果複製");
+                    alert("複製失敗，請手動選取結果複製(｡ŏ_ŏ)");
                 });
         }
 
